@@ -37,10 +37,9 @@ class AsyncSender():
             "data": items
         }).encode('utf-8')
 
-        logging.debug(f'Payload created, {len(payload)} bytes: {payload}')
         return payload
     
-    def _create_packet(self, items : list[ItemData]):
+    def _create_packet(self, items : list[ItemData]) -> bytes:
         #https://www.zabbix.com/documentation/current/en/manual/appendix/items/trapper
         payload = self._create_payload(items)
         payload_len = struct.pack('<L', len(payload))
@@ -49,16 +48,27 @@ class AsyncSender():
         logging.debug(f'Zabbix packet created, {len(packet)} bytes: {packet}')
         return packet
 
-    async def send(self, items : list[ItemData]):
-        packet = self._create_packet(items)
+    def _parse_response_header(self, header : bytes) -> int:
+        if header[0:4] != b'ZBXD' or header[4] != 1:
+            raise ValueError('zabbix header not found or incorrect')
 
-        reader, writer = await asyncio.open_connection(self.server, self.port)
+        #discard first 5 bytes, the ZBXD + 1 useless byte
+        response_size = struct.unpack('<Q', header[5:])
+
+        return response_size[0]
+
+    async def _write_data(self, writer : asyncio.StreamWriter, packet : bytes):
         writer.write(packet)
         await writer.drain()
-        
+
+    def _parse_response(self, response : bytes):
+        obj = json.loads(response)
+        return obj
+
+    async def _read_response(self, reader : asyncio.StreamReader):
         header = await reader.read(self.HEADER_SIZE)
-        #example of received header: b'ZBXD\x01Z\x00\x00\x00\x00\x00\x00\x00'
-        _, _, resp_size = struct.unpack('<4s1sQ', header)
+        logging.debug(f'Zabbix response received, header: {header}')
+        resp_size = self._parse_response_header(header)
         
         #example of received data: b'{"response":"success","info":"processed: 1; failed: 0; total: 1; seconds spent: 0.000051"}'
         data = b''
@@ -67,5 +77,21 @@ class AsyncSender():
             buffer = await reader.read(self.BUFFER_SIZE)
             data += buffer
         
+        logging.debug(f'Zabbix response payload: {data}')
+        teste = self._parse_response(data)
+        return teste
+
+    async def send(self, items : list[ItemData] = None):
+        #force items to an array
+        if type(items) is ItemData:
+            items = [items]
+
+        packet = self._create_packet(items)
+
+        reader, writer = await asyncio.open_connection(self.server, self.port)
+        await self._write_data(writer, packet)
+        
+        response = await self._read_response(reader)
+
         writer.close()
-        await writer.wait_closed()
+        await writer.wait_closed()            
