@@ -1,8 +1,8 @@
 from unittest import TestCase
 
-from zabbixasync.sender import AsyncSender, ItemData
+from zabbixasync.sender import AsyncSender
 
-class TestPacket(TestCase):
+class TestResponseHeader(TestCase):
     def setUp(self):
         self.sender = AsyncSender('server')  
 

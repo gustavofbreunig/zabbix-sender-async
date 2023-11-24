@@ -1,11 +1,14 @@
+from dataclasses import dataclass
 import json
 import logging
+import re
 import struct
 from typing import Any, Optional
 import asyncio
 
 
 logger = logging.getLogger(__name__)
+ZABBIX_RETURN_REGEX = re.compile(r'processed: (\d+); failed: (\d+); total: (\d+); seconds spent: (\d+\.\d+)')
 
 class ItemData(dict):
     """
@@ -20,6 +23,14 @@ class ItemData(dict):
             self['clock'] = clock
         if ns != None:
             self['ns'] = ns
+
+@dataclass
+class ZabbixResponse:
+    processed: int
+    failed: int
+    total: int
+    seconds_spent: float
+    response: str
 
 
 class AsyncSender():
@@ -45,46 +56,57 @@ class AsyncSender():
         payload_len = struct.pack('<L', len(payload))
         packet = b'ZBXD' + b'\x01' + payload_len + b'\x00\x00\x00\x00' + payload
 
-        logging.debug(f'Zabbix packet created, {len(packet)} bytes: {packet}')
+        logging.debug(f'packet created, length: {len(packet)} bytes')
         return packet
 
-    def _parse_response_header(self, header : bytes) -> int:
+    def _parse_response_header(self, header : bytes) -> int:       
         if header[0:4] != b'ZBXD' or header[4] != 1:
             raise ValueError('zabbix header not found or incorrect')
 
         #discard first 5 bytes, the ZBXD + 1 useless byte
         response_size = struct.unpack('<Q', header[5:])
 
+        logging.debug(f'response header received, response size {response_size[0]} bytes')
         return response_size[0]
 
-    async def _write_data(self, writer : asyncio.StreamWriter, packet : bytes):
+    async def _write_data(self, writer : asyncio.StreamWriter, packet : bytes):        
         writer.write(packet)
         await writer.drain()
 
-    def _parse_response(self, response : bytes):
+    def _parse_response(self, response : bytes) -> ZabbixResponse:
         obj = json.loads(response)
-        return obj
+
+        parsed_data = ZABBIX_RETURN_REGEX.match(obj['info'])
+        
+        response_object = ZabbixResponse(
+            response=obj['response'],
+            processed= int(parsed_data.group(1)),
+            failed= int(parsed_data.group(2)),
+            total= int(parsed_data.group(3)),
+            seconds_spent= float(parsed_data.group(4))
+        )
+        logging.debug(f'parsed response: {response_object}')
+        return response_object
 
     async def _read_response(self, reader : asyncio.StreamReader):
         header = await reader.read(self.HEADER_SIZE)
-        logging.debug(f'Zabbix response received, header: {header}')
         resp_size = self._parse_response_header(header)
         
-        #example of received data: b'{"response":"success","info":"processed: 1; failed: 0; total: 1; seconds spent: 0.000051"}'
         data = b''
         buffer = b''
         while len(data) < resp_size:
             buffer = await reader.read(self.BUFFER_SIZE)
             data += buffer
-        
-        logging.debug(f'Zabbix response payload: {data}')
-        teste = self._parse_response(data)
-        return teste
+                
+        resp = self._parse_response(data)
+        return resp
 
-    async def send(self, items : list[ItemData] = None):
+    async def send(self, items : list[ItemData] = None) -> ZabbixResponse:
         #force items to an array
         if type(items) is ItemData:
             items = [items]
+
+        logging.debug(f'sending {len(items)} metrics to Zabbix server {self.server}:{self.port}')
 
         packet = self._create_packet(items)
 
@@ -94,4 +116,6 @@ class AsyncSender():
         response = await self._read_response(reader)
 
         writer.close()
-        await writer.wait_closed()            
+        await writer.wait_closed()
+
+        return response
