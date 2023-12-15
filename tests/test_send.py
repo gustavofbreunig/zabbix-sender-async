@@ -21,9 +21,6 @@ class TestSend(IsolatedAsyncioTestCase):
     ZABBIX_PASS=zabbix 
     """
 
-    #number of items to send
-    METRIC_COUNT = 2
-
     def get_metrics_description(self):
         #items (metrics) to include in zabbix, a list of tuple (name, zabbix type code, value)
         #type code: https://www.zabbix.com/documentation/current/en/manual/api/reference/item/object#host
@@ -175,8 +172,7 @@ class TestSend(IsolatedAsyncioTestCase):
     def setupHost(self):
         auth = self.do_login(os.environ["ZABBIX_USER"], os.environ["ZABBIX_PASS"])
         if not self.hostExists(auth):
-            self.createHost(auth)
-            
+            self.createHost(auth)            
 
     async def asyncSetUp(self):
         load_dotenv()
@@ -191,34 +187,68 @@ class TestSend(IsolatedAsyncioTestCase):
         self.assertGreater(result.total, 0)
         self.assertGreater(result.processed, 0)    
 
-    async def test_asynchronous_sending(self):
+    async def send_metrics_serial(self, metric_count : int, sender):
+        """
+        Send metrics one by one and return time spent (in seconds)
+        """
+        sender = self.get_sender()
+        metrics = []
+        results = []
+        for _ in range(0, metric_count):
+            metrics.append(self.get_zabbix_metrics())
+        
+        start = time.time()
+        for metric in metrics:
+            ret = await sender.send(metric)
+            results.append(ret)            
+        end = time.time()
+
+        #make sure every metric was sent
+        metrics_len = len(self.get_zabbix_metrics())
+        for result in results:
+            self.assertEqual(result.processed, metrics_len)
+
+        return end - start
+    
+    async def send_metrics_paralell(self, metric_count : int, sender):
         sender = self.get_sender()
 
-        metrics = []
-        for _ in range(0,self.METRIC_COUNT):
-            metrics.append(self.get_zabbix_metrics())
-
-        start_time_sync = time.time()
-        for metric in metrics:
-            await sender.send(metric)
-        end_time_sync = time.time()
-        time_spent_sync = end_time_sync - start_time_sync        
-
         tasks = []
-        for _ in range(0,self.METRIC_COUNT):
+        for _ in range(0, metric_count):
             tasks.append(sender.send(self.get_zabbix_metrics()))
 
-        start_time_async = time.time()
+        start = time.time()
         results = await asyncio.gather(*tasks)
-        end_time_async = time.time()
-        time_spent_async = end_time_async - start_time_async
+        end = time.time()
 
-        #asynchronous testing proof, the network is the bottleneck so the difference is small
+        metrics_len = len(self.get_zabbix_metrics())
+        for result in results:
+            self.assertEqual(result.processed, metrics_len)
+
+        return end - start
+
+#tests who proves somewhat the async function:
+#send a chunck of metrics one by one, then, in parallel (using asyncio.gather)
+#parallel execution must be faster in (almost) any case
+
+    async def test_paralell_vs_serial_sending_10_metrics(self):
+        sender = self.get_sender()
+        serial_time_spent = await self.send_metrics_serial(10, sender)
+        parallel_time_spent = await self.send_metrics_paralell(10, sender)
         
-        #asynchronous execution must be faster
-        self.assertLess(time_spent_async, time_spent_sync)
+        #10 metrics is not so much so times can vary
+        self.assertAlmostEqual(serial_time_spent, parallel_time_spent, 1)
 
-        #asynchronous executions must be 10% faster at least
-        time_spent_sync - time_spent_async > time_spent_sync * 0.1
+    async def test_paralell_vs_serial_sending_50_metrics(self):
+        sender = self.get_sender()
+        serial_time_spent = await self.send_metrics_serial(50, sender)
+        parallel_time_spent = await self.send_metrics_paralell(50, sender)
+        
+        self.assertGreater(serial_time_spent, parallel_time_spent)      
 
-        self.assertTrue(True)
+    async def test_paralell_vs_serial_sending_100_metrics(self):
+        sender = self.get_sender()
+        serial_time_spent = await self.send_metrics_serial(100, sender)
+        parallel_time_spent = await self.send_metrics_paralell(100, sender)
+        
+        self.assertGreater(serial_time_spent, parallel_time_spent)  
