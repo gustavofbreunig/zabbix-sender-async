@@ -53,9 +53,10 @@ class TestSend(IsolatedAsyncioTestCase):
 
     def get_api_url(self):
         return ''.join(['http://',
-                       os.environ["ZABBIX_HOST"],
-                       ':', os.environ["ZABBIX_API_PORT"],
-                       '/api_jsonrpc.php'])
+                        os.environ["ZABBIX_HOST"],
+                        ':',
+                        os.environ["ZABBIX_API_PORT"],
+                        '/api_jsonrpc.php'])
 
     def add_default_headers(self, req: urllib.request.Request):
         req.add_header('Content-Type', 'application/json-rpc')
