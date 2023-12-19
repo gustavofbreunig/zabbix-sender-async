@@ -116,7 +116,7 @@ class AsyncSender():
         resp = self._parse_response(data)
         return resp
 
-    async def send(self, items: list[ItemData] = None) -> ZabbixResponse:
+    async def send(self, items = None) -> ZabbixResponse:
         # force items to an array
         if type(items) is ItemData:
             items = [items]
