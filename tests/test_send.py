@@ -1,7 +1,6 @@
 import asyncio
 import json
 import random
-import socket
 import time
 from dotenv import load_dotenv
 from unittest import IsolatedAsyncioTestCase

@@ -3,7 +3,6 @@ from unittest import TestCase
 
 from zabbixasync.sender import ItemData
 
-
 class TestItemData(TestCase):
     def test_init(self):
         expected = '{"host": "localhost", "key": "test", "value": 123456}'
