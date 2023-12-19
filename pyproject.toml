@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zabbix-sender-async"
-version = "1.0.0"
+version = "1.0.2"
 authors = [
   { name="Gustavo Breunig", email="gustavofbreunig@gmail.com" }
 ]
@@ -27,4 +27,4 @@ Homepage = "https://github.com/gustavofbreunig/zabbix-sender-async"
 Issues = "https://github.com/gustavofbreunig/zabbix-sender-async/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["zabbixasync"]

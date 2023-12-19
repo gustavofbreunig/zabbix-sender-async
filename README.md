@@ -10,17 +10,21 @@ Install
 Examples
 --------
 
+```python
 import asyncio
-from src.sender import AsyncSender, ItemData
+from zabbixasync.sender import AsyncSender, ItemData
 
 async def sendmetrics():
     sender = AsyncSender('localhost', 10051)
-    metric = ItemData(host='async-sender-test-host', key='test.metric.text', value='test package import')
+    metric = ItemData(host='hostname', key='test.metric.text', value='test package import')
     result = await sender.send(metric)
     print(result)
 
 asyncio.run(sendmetrics())
-
+```
 
 Expected result:
 
+```
+ZabbixResponse(processed=1, failed=0, total=1, seconds_spent=0.00019, response='success')
+```
