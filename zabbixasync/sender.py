@@ -51,7 +51,7 @@ class AsyncSender():
         self.server = server
         self.port = port
 
-    def _create_payload(self, items: list[ItemData]):
+    def _create_payload(self, items):
         payload = json.dumps({
             "request": "sender data",
             "data": items
@@ -59,7 +59,7 @@ class AsyncSender():
 
         return payload
 
-    def _create_packet(self, items: list[ItemData]) -> bytes:
+    def _create_packet(self, items) -> bytes:
         # https://www.zabbix.com/documentation/current/en/manual/appendix/items/trapper
         payload = self._create_payload(items)
         payload_len = struct.pack('<L', len(payload))
