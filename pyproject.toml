@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zabbix-sender-async"
+version = "1.0.0"
+authors = [
+  { name="Gustavo Breunig", email="gustavofbreunig@gmail.com" }
+]
+description = "A Zabbix sender module with async features"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Monitoring",
+    "Topic :: System :: Networking :: Monitoring",
+    "Topic :: System :: Systems Administration"  
+]
+license = {file = "LICENSE"}
+keywords = ["zabbix", "sender", "async"]
+
+[project.urls]
+Homepage = "https://github.com/gustavofbreunig/zabbix-sender-async"
+Issues = "https://github.com/gustavofbreunig/zabbix-sender-async/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
