@@ -21,6 +21,9 @@ classifiers = [
 ]
 license = {file = "LICENSE"}
 keywords = ["zabbix", "sender", "async"]
+dependencies = [
+"python-dotenv"
+]
 
 [project.urls]
 Homepage = "https://github.com/gustavofbreunig/zabbix-sender-async"
