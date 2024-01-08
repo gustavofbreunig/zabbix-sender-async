@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import string
 import time
 from dotenv import load_dotenv
 from unittest import IsolatedAsyncioTestCase
@@ -30,10 +31,13 @@ class TestSend(IsolatedAsyncioTestCase):
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/item/object#host
         # make sure to have at minimum one item of each data type
         return [
-            ('test.metric.text', 4, "this data came from zabbix-sender-async"),
+            ('test.metric.text', 4, self.generate_random_string(1024)),
             ('test.metric.unsigned', 3, int(random.random() * 10000)),
             ('test.metric.float', 0, random.random())
         ]
+
+    def generate_random_string(self, size: int) -> str:
+        return ''.join(random.choices(string.ascii_lowercase, k=size))
 
     def get_zabbix_metrics(self):
         hostname = self.get_test_hostname()
