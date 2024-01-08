@@ -35,10 +35,11 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
+        docker compose up -d
+        sleep 30
         echo ZABBIX_USER=Admin >> .env
         echo ZABBIX_PASS=zabbix >> .env
         echo ZABBIX_SENDER_PORT=10051 >> .env
         echo ZABBIX_API_PORT=8888 >> .env
-        echo ZABBIX_HOST=localhost >> .env
-        docker compose up -d
+        echo ZABBIX_HOST=localhost >> .env        
         python -m unittest
