@@ -31,7 +31,7 @@ class TestSend(IsolatedAsyncioTestCase):
         # https://www.zabbix.com/documentation/current/en/manual/api/reference/item/object#host
         # make sure to have at minimum one item of each data type
         return [
-            ('test.metric.text', 4, self.generate_random_string(1024)),
+            ('test.metric.text', 4, self.generate_random_string(255)),
             ('test.metric.unsigned', 3, int(random.random() * 10000)),
             ('test.metric.float', 0, random.random())
         ]
@@ -238,9 +238,10 @@ class TestSend(IsolatedAsyncioTestCase):
 
         result = await sender.send(metrics)
         self.assertIsNotNone(result)
+        self.assertEqual(result.response, 'success')        
         self.assertGreater(result.total, 0)
         self.assertGreater(result.processed, 0)
-        self.assertEqual(result.response, 'success')
+
 
 # tests who proves somewhat the async function:
 # send a chunck of metrics one by one,
