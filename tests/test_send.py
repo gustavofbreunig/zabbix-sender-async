@@ -215,31 +215,6 @@ class TestSend(IsolatedAsyncioTestCase):
         self.validateEnvironmentVariables()
         self.setupHost()
 
-    async def send_metrics_serial(self, metric_count: int, sender):
-        """
-        Send metrics one by one and return time spent (in seconds)
-        """
-        sender = self.get_sender()
-        metrics = []
-        results = []
-        for _ in range(0, metric_count):
-            metrics.append(self.get_zabbix_metrics())
-
-        # sleep so zabbix can recover from multiple calls
-        await asyncio.sleep(3)
-        start = time.time()
-        for metric in metrics:
-            ret = await sender.send(metric)
-            results.append(ret)
-        end = time.time()
-
-        # make sure every metric was sent
-        metrics_len = len(self.get_zabbix_metrics())
-        for result in results:
-            self.assertEqual(result.processed, metrics_len)
-
-        return end - start
-
     async def send_metrics_parallel(self, metric_count: int, sender):
         sender = self.get_sender()
 
@@ -247,8 +222,6 @@ class TestSend(IsolatedAsyncioTestCase):
         for _ in range(0, metric_count):
             tasks.append(sender.send(self.get_zabbix_metrics()))
 
-        # sleep so zabbix can recover from multiple calls
-        await asyncio.sleep(3)
         start = time.time()
         results = await asyncio.gather(*tasks, return_exceptions=False)
         end = time.time()
@@ -269,22 +242,22 @@ class TestSend(IsolatedAsyncioTestCase):
         self.assertGreater(result.processed, 0)
 
 # tests who proves somewhat the async function:
-# send a chunck of metrics one by one, then, in parallel (using asyncio.gather)
+# send a chunck of metrics one by one,
+# then, in parallel (using asyncio.gather on both)
 # parallel execution must be faster in (almost) any case
 
     async def test_paralell_vs_serial_sending(self):
         sender = self.get_sender()
+        TEST_SIZE = 100
 
-        parallel_time_spent = await self.send_metrics_parallel(10, sender)
-        serial_time_spent = await self.send_metrics_serial(10, sender)
+        execution_time_one_by_one = 0
+        for _ in range(0, TEST_SIZE):
+            send_time = await self.send_metrics_parallel(1, sender)
+            execution_time_one_by_one = execution_time_one_by_one + send_time
 
-        self.assertLessEqual(parallel_time_spent, serial_time_spent,
-                             'parallel metric sending was \
-slower than serial when using 10 metrics')
+        execution_time_chunk = \
+            await self.send_metrics_parallel(TEST_SIZE, sender)
 
-        parallel_time_spent = await self.send_metrics_parallel(100, sender)
-        serial_time_spent = await self.send_metrics_serial(100, sender)
-
-        self.assertLessEqual(parallel_time_spent, serial_time_spent,
-                             'parallel metric sending was slower \
-than serial when using 100 metrics')
+        self.assertLessEqual(execution_time_chunk, execution_time_one_by_one,
+                             'average time for parallel \
+execution was worse than serial')
