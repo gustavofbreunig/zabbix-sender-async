@@ -40,4 +40,5 @@ jobs:
         echo ZABBIX_SENDER_PORT=10051 >> .env
         echo ZABBIX_API_PORT=8888 >> .env
         echo ZABBIX_HOST=localhost >> .env
+        docker compose up -d
         python -m unittest
