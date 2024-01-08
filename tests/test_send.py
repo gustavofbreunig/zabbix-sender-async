@@ -238,16 +238,14 @@ class TestSend(IsolatedAsyncioTestCase):
 
         result = await sender.send(metrics)
         self.assertIsNotNone(result)
-        self.assertEqual(result.response, 'success')        
+        self.assertEqual(result.response, 'success')
         self.assertGreater(result.total, 0)
         self.assertGreater(result.processed, 0)
-
 
 # tests who proves somewhat the async function:
 # send a chunck of metrics one by one,
 # then, in parallel (using asyncio.gather on both)
 # parallel execution must be faster in (almost) any case
-
     async def test_paralell_vs_serial_sending(self):
         sender = self.get_sender()
         TEST_SIZE = 100
