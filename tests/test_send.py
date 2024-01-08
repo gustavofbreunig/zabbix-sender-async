@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import threading
 import time
 from dotenv import load_dotenv
 from unittest import IsolatedAsyncioTestCase
@@ -78,8 +79,12 @@ class TestSend(IsolatedAsyncioTestCase):
         ret_str = ret.read().decode('utf-8')
         ret_json = json.loads(ret_str)
 
-        if 'error' in ret_json:
-            raise Exception(ret_json['error'])
+        if 'error' in ret_json and ret_json['error']['code'] == 1 and ret_json['error']['message'] == 'Unable to select configuration.':
+            #server not ready yet, try again after 10 seconds using recursion
+            time.sleep(10)
+            return self.do_request(request_obj)
+        elif 'error' in ret_json:
+            raise Exception(ret_json['error']['message'])
 
         return ret_json
 
@@ -190,15 +195,6 @@ class TestSend(IsolatedAsyncioTestCase):
         load_dotenv()
         self.setupHost()
 
-    async def test_simple_send(self):
-        sender = self.get_sender()
-        metrics = self.get_zabbix_metrics()
-
-        result = await sender.send(metrics)
-        self.assertIsNotNone(result)
-        self.assertGreater(result.total, 0)
-        self.assertGreater(result.processed, 0)
-
     async def send_metrics_serial(self, metric_count: int, sender):
         """
         Send metrics one by one and return time spent (in seconds)
@@ -209,6 +205,7 @@ class TestSend(IsolatedAsyncioTestCase):
         for _ in range(0, metric_count):
             metrics.append(self.get_zabbix_metrics())
 
+        await asyncio.sleep(3) #sleep so zabbix can recover from multiple calls
         start = time.time()
         for metric in metrics:
             ret = await sender.send(metric)
@@ -222,15 +219,16 @@ class TestSend(IsolatedAsyncioTestCase):
 
         return end - start
 
-    async def send_metrics_paralell(self, metric_count: int, sender):
+    async def send_metrics_parallel(self, metric_count: int, sender):
         sender = self.get_sender()
 
         tasks = []
         for _ in range(0, metric_count):
             tasks.append(sender.send(self.get_zabbix_metrics()))
 
+        await asyncio.sleep(3) #sleep so zabbix can recover from multiple calls
         start = time.time()
-        results = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=False)
         end = time.time()
 
         metrics_len = len(self.get_zabbix_metrics())
@@ -239,28 +237,34 @@ class TestSend(IsolatedAsyncioTestCase):
 
         return end - start
 
+    async def test_simple_send(self):
+        sender = self.get_sender()
+        metrics = self.get_zabbix_metrics()
+
+        result = await sender.send(metrics)
+        self.assertIsNotNone(result)
+        self.assertGreater(result.total, 0)
+        self.assertGreater(result.processed, 0)
+
 # tests who proves somewhat the async function:
 # send a chunck of metrics one by one, then, in parallel (using asyncio.gather)
 # parallel execution must be faster in (almost) any case
 
-    async def test_paralell_vs_serial_sending_10_metrics(self):
+    async def test_paralell_vs_serial_sending(self):
         sender = self.get_sender()
+        
+        parallel_time_spent = await self.send_metrics_parallel(10, sender)
         serial_time_spent = await self.send_metrics_serial(10, sender)
-        parallel_time_spent = await self.send_metrics_paralell(10, sender)
 
         # 10 metrics is not so much so times can vary
-        self.assertAlmostEqual(serial_time_spent, parallel_time_spent, 1)
+        self.assertAlmostEqual(serial_time_spent, parallel_time_spent, 1, 'serial vs parallel metric sending times are too different')
 
-    async def test_paralell_vs_serial_sending_50_metrics(self):
-        sender = self.get_sender()
+        parallel_time_spent = await self.send_metrics_parallel(50, sender)
         serial_time_spent = await self.send_metrics_serial(50, sender)
-        parallel_time_spent = await self.send_metrics_paralell(50, sender)
 
-        self.assertGreater(serial_time_spent, parallel_time_spent)
+        self.assertLessEqual(parallel_time_spent, serial_time_spent, 'parallel metric sending was slower than serial when using 50 metrics')
 
-    async def test_paralell_vs_serial_sending_100_metrics(self):
-        sender = self.get_sender()
+        parallel_time_spent = await self.send_metrics_parallel(100, sender)
         serial_time_spent = await self.send_metrics_serial(100, sender)
-        parallel_time_spent = await self.send_metrics_paralell(100, sender)
 
-        self.assertGreater(serial_time_spent, parallel_time_spent)
+        self.assertLessEqual(parallel_time_spent, serial_time_spent, 'parallel metric sending was slower than serial when using 100 metrics')
