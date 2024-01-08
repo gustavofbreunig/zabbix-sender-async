@@ -8,6 +8,11 @@ services:
     environment:
       POSTGRES_USER: zabbix
       POSTGRES_PASSWORD: zabbix
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   zabbix-server:
     image: zabbix/zabbix-server-pgsql:alpine-${ZABBIX_VERSION:-6.2}-latest
