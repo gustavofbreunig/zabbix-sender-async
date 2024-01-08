@@ -240,6 +240,7 @@ class TestSend(IsolatedAsyncioTestCase):
         self.assertIsNotNone(result)
         self.assertGreater(result.total, 0)
         self.assertGreater(result.processed, 0)
+        self.assertEqual(result.response, 'success')
 
 # tests who proves somewhat the async function:
 # send a chunck of metrics one by one,
