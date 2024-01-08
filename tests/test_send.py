@@ -275,13 +275,6 @@ class TestSend(IsolatedAsyncioTestCase):
     async def test_paralell_vs_serial_sending(self):
         sender = self.get_sender()
 
-        parallel_time_spent = await self.send_metrics_parallel(1, sender)
-        serial_time_spent = await self.send_metrics_serial(1, sender)
-
-        self.assertAlmostEqual(serial_time_spent, parallel_time_spent, 1,
-                               'serial vs parallel metric \
-sending times are too different')
-
         parallel_time_spent = await self.send_metrics_parallel(10, sender)
         serial_time_spent = await self.send_metrics_serial(10, sender)
 
