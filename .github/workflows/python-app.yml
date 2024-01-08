@@ -36,7 +36,7 @@ jobs:
     - name: Test with unittest
       run: |
         docker compose up -d
-        sleep 30
+        sleep 60
         echo ZABBIX_USER=Admin >> .env
         echo ZABBIX_PASS=zabbix >> .env
         echo ZABBIX_SENDER_PORT=10051 >> .env
