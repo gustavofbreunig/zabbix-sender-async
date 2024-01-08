@@ -275,7 +275,7 @@ class TestSend(IsolatedAsyncioTestCase):
         serial_time_spent = await self.send_metrics_serial(10, sender)
 
         # 10 metrics is not so much so times can vary
-        self.assertAlmostEqual(serial_time_spent, parallel_time_spent, 1,
+        self.assertAlmostEqual(serial_time_spent, parallel_time_spent, 2,
                                'serial vs parallel metric \
 sending times are too different')
 
