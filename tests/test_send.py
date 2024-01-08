@@ -188,6 +188,18 @@ class TestSend(IsolatedAsyncioTestCase):
         host_count = len(ret_json['result'])
         return host_count > 0
 
+    def validateEnvironmentVariables(self):
+        vars = ['ZABBIX_HOST', 'ZABBIX_API_PORT',
+                'ZABBIX_SENDER_PORT', 'ZABBIX_USER',
+                'ZABBIX_PASS']
+
+        env = list(os.environ)
+
+        match = [e for e in vars if e not in env]
+
+        if len(match) > 0:
+            raise Exception(f'Environment variables not found: {match}')
+
     def setupHost(self):
         auth = self.do_login(
             os.environ["ZABBIX_USER"], os.environ["ZABBIX_PASS"])
@@ -196,6 +208,7 @@ class TestSend(IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self):
         load_dotenv()
+        self.validateEnvironmentVariables()
         self.setupHost()
 
     async def send_metrics_serial(self, metric_count: int, sender):
