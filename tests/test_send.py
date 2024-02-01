@@ -242,10 +242,14 @@ class TestSend(IsolatedAsyncioTestCase):
         self.assertGreater(result.total, 0)
         self.assertGreater(result.processed, 0)
 
+    async def test_fail_send(self):
+        self.assertEqual(1 == 2)
+
 # tests who proves somewhat the async function:
 # send a chunck of metrics one by one,
 # then, in parallel (using asyncio.gather on both)
-# parallel execution must be faster in (almost) any case
+# parallel execution must be faster
+# this test could be fooled by overhead, who knows
     async def test_paralell_vs_serial_sending(self):
         sender = self.get_sender()
         TEST_SIZE = 100
@@ -261,3 +265,8 @@ class TestSend(IsolatedAsyncioTestCase):
         self.assertLessEqual(execution_time_chunk, execution_time_one_by_one,
                              'average time for parallel \
 execution was worse than serial')
+
+# send some metrics along some long running async task (sleep)
+# the total execution time must be equal to long running task
+    async def test_long_running_task(self):
+        self.assertEqual(True == False)
