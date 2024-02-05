@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zabbix-sender-async"
-version = "1.0.3"
+version = "1.0.4"
 authors = [
   { name="Gustavo Breunig", email="gustavofbreunig@gmail.com" }
 ]
