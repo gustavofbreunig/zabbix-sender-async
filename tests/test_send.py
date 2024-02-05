@@ -243,7 +243,13 @@ class TestSend(IsolatedAsyncioTestCase):
         self.assertGreater(result.processed, 0)
 
     async def test_fail_send(self):
-        self.assertEqual(1 == 2)
+        sender = self.get_sender()
+        invalid_data = ItemData('invalid_host', 'invalid.metric', 0)
+        result = await sender.send(invalid_data)
+
+        self.assertIsNotNone(result)
+        self.assertEqual(result.response, 'success')
+        self.assertEqual(result.failed, 1)
 
 # tests who proves somewhat the async function:
 # send a chunck of metrics one by one,
@@ -266,7 +272,23 @@ class TestSend(IsolatedAsyncioTestCase):
                              'average time for parallel \
 execution was worse than serial')
 
-# send some metrics along some long running async task (sleep)
-# the total execution time must be equal to long running task
+# send metrics along some long running task, the final time
+# must be the longest
     async def test_long_running_task(self):
-        self.assertEqual(True == False)
+        SLEEP_TIME = 3
+        sender = self.get_sender()
+
+        tasks = []
+        tasks.append(asyncio.sleep(SLEEP_TIME))
+        tasks.append(asyncio.sleep(SLEEP_TIME / 2))
+        tasks.append(asyncio.sleep(SLEEP_TIME / 3))
+        tasks.append(asyncio.sleep(SLEEP_TIME / 4))
+        tasks.append(asyncio.sleep(SLEEP_TIME / 5))
+        tasks.append(sender.send(self.get_zabbix_metrics()))
+
+        start = time.time()
+        await asyncio.gather(*tasks)
+        end = time.time()
+
+        diff = end - start
+        self.assertAlmostEqual(SLEEP_TIME, diff, 1)

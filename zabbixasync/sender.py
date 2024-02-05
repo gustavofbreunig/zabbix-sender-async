@@ -129,8 +129,6 @@ class AsyncSender():
         reader, writer = await asyncio.open_connection(self.server, self.port)
         await self._write_data(writer, packet)
 
-        # return await self._read_response(reader)
-
         response = await self._read_response(reader)
 
         writer.close()
