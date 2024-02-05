@@ -19,14 +19,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up Python 3.9
+    - name: Set up Python 3.8
       uses: actions/setup-python@v3
       with:
         python-version: "3.8"
     - name: Install dependencies
       run: |
         pip install --upgrade pip
-        pip install flake8 python-dotenv
+        pip install flake8 python-dotenv build
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -43,3 +43,10 @@ jobs:
         echo ZABBIX_API_PORT=8888 >> .env
         echo ZABBIX_HOST=localhost >> .env        
         python -m unittest -v
+    - name: Build a binary wheel and a source tarball
+      run: python -m build
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
