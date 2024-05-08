@@ -1,3 +1,5 @@
+!(https://github.com/gustavofbreunig/zabbix-sender-async/actions/workflows/python-app.yml/badge.svg)
+
 Zabbix Async Sender module for Python
 ========================
 
