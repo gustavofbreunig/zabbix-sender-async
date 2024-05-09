@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import random
 import string
 import time
@@ -41,13 +40,13 @@ class TestSend():
     def generate_random_string(self, size: int) -> str:
         return ''.join(random.choices(string.ascii_lowercase, k=size))
 
-    def get_zabbix_metrics(self, number_of_metrics = 1):
+    def get_zabbix_metrics(self, number_of_metrics=1):
         # generate random metrics
         metrics = []
         for i in range(number_of_metrics):
             hostname = self.get_test_hostname()
             desc = self.get_metrics_description()[i % 3]
-            metrics.append(ItemData(host=hostname, key=desc[0], value=desc[2])) 
+            metrics.append(ItemData(host=hostname, key=desc[0], value=desc[2]))
         return metrics
 
     def get_test_hostname(self):
@@ -240,13 +239,13 @@ class TestSend():
         # send 1 big packet with 1000 metrics and calculate processing time
         # then create a 3 big packets with 1000 metrics each
         # and send asynchronously
-        # the total processed time must be almost the same 
+        # the total processed time must be almost the same
         METRICS = 1000
         sender = self.get_sender()
         metrics = []
 
         dummy_metrics = self.get_zabbix_metrics(METRICS)
-        [metrics.append(dummy_metric) for dummy_metric in dummy_metrics] 
+        [metrics.append(dummy_metric) for dummy_metric in dummy_metrics]
 
         assert len(metrics) == METRICS
 
@@ -258,21 +257,22 @@ class TestSend():
         assert response[0] is not None
         assert response[0].response == 'success'
         assert response[0].processed == METRICS
-        assert duration_first_send  > 0
+        assert duration_first_send > 0
 
-        tasks = [sender.send(metrics), sender.send(metrics), sender.send(metrics)]
+        tasks = [sender.send(metrics),
+                 sender.send(metrics),
+                 sender.send(metrics)]
 
         start = time.time()
         response = await asyncio.gather(*tasks)
         end = time.time()
         duration_second_send = end - start
 
-        assert duration_second_send  < (duration_first_send * 3)
+        assert duration_second_send < (duration_first_send * 3)
 
-
-# send metrics along some long running task, the final time
-# must be the longest
     async def test_long_running_task(self, setup):
+        # send metrics along some long running task, the final time
+        # must be the longest
         SLEEP_TIME = 3
         sender = self.get_sender()
 
@@ -291,7 +291,6 @@ class TestSend():
         execution_time = end - start
         assert execution_time <= SLEEP_TIME + 0.01
 
-
     async def test_big_metric(self, setup):
         sender = self.get_sender()
         items = []
@@ -304,5 +303,3 @@ class TestSend():
         assert response is not None
         assert response.processed == 5000
         assert response.response == 'success'
-
-        
