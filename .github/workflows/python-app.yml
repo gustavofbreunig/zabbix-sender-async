@@ -35,7 +35,8 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        docker compose up -d
+        docker compose up --detach
+        echo waiting for zabbix to start
         sleep 60
         echo ZABBIX_USER=Admin >> .env
         echo ZABBIX_PASS=zabbix >> .env

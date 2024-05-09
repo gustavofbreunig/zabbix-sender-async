@@ -1,17 +1,19 @@
 import asyncio
 import json
+import logging
 import random
 import string
 import time
 from dotenv import load_dotenv
-from unittest import IsolatedAsyncioTestCase
 import os
 import urllib.request
+
+import pytest
 
 from zabbixasync.sender import AsyncSender, ItemData
 
 
-class TestSend(IsolatedAsyncioTestCase):
+class TestSend():
     """
     Test async operations.
     Configure all variables according to your enrivonment in a .env file:
@@ -39,15 +41,14 @@ class TestSend(IsolatedAsyncioTestCase):
     def generate_random_string(self, size: int) -> str:
         return ''.join(random.choices(string.ascii_lowercase, k=size))
 
-    def get_zabbix_metrics(self):
-        hostname = self.get_test_hostname()
-        desc = self.get_metrics_description()
-        structured_items = map(lambda tuple:
-                               ItemData(host=hostname,
-                                        key=tuple[0],
-                                        value=tuple[2]),
-                               desc)
-        return list(structured_items)
+    def get_zabbix_metrics(self, number_of_metrics = 1):
+        # generate random metrics
+        metrics = []
+        for i in range(number_of_metrics):
+            hostname = self.get_test_hostname()
+            desc = self.get_metrics_description()[i % 3]
+            metrics.append(ItemData(host=hostname, key=desc[0], value=desc[2])) 
+        return metrics
 
     def get_test_hostname(self):
         return 'async-sender-test-host'
@@ -210,71 +211,68 @@ class TestSend(IsolatedAsyncioTestCase):
         if not self.hostExists(auth):
             self.createHost(auth)
 
-    async def asyncSetUp(self):
+    @pytest.fixture
+    def setup(self):
         load_dotenv()
         self.validateEnvironmentVariables()
         self.setupHost()
 
-    async def send_metrics_parallel(self, metric_count: int, sender):
-        sender = self.get_sender()
-
-        tasks = []
-        for _ in range(0, metric_count):
-            tasks.append(sender.send(self.get_zabbix_metrics()))
-
-        start = time.time()
-        results = await asyncio.gather(*tasks, return_exceptions=False)
-        end = time.time()
-
-        metrics_len = len(self.get_zabbix_metrics())
-        for result in results:
-            self.assertEqual(result.processed, metrics_len)
-
-        return end - start
-
-    async def test_simple_send(self):
+    async def test_simple_send(self, setup):
         sender = self.get_sender()
         metrics = self.get_zabbix_metrics()
 
         result = await sender.send(metrics)
-        self.assertIsNotNone(result)
-        self.assertEqual(result.response, 'success')
-        self.assertGreater(result.total, 0)
-        self.assertGreater(result.processed, 0)
+        assert result is not None
+        assert result.response == 'success'
+        assert result.total == 1
+        assert result.processed == 1
 
-    async def test_fail_send(self):
+    async def test_fail_send(self, setup):
         sender = self.get_sender()
         invalid_data = ItemData('invalid_host', 'invalid.metric', 0)
         result = await sender.send(invalid_data)
 
-        self.assertIsNotNone(result)
-        self.assertEqual(result.response, 'success')
-        self.assertEqual(result.failed, 1)
+        assert result is not None
+        assert result.response == 'success'
+        assert result.failed == 1
 
-# tests who proves somewhat the async function:
-# send a chunck of metrics one by one,
-# then, in parallel (using asyncio.gather on both)
-# parallel execution must be faster
-# this test could be fooled by overhead, who knows
-    async def test_paralell_vs_serial_sending(self):
+    async def test_big_chunk(self, setup):
+        # send 1 big packet with 1000 metrics and calculate processing time
+        # then create a 3 big packets with 1000 metrics each
+        # and send asynchronously
+        # the total processed time must be almost the same 
+        METRICS = 1000
         sender = self.get_sender()
-        TEST_SIZE = 100
+        metrics = []
 
-        execution_time_one_by_one = 0
-        for _ in range(0, TEST_SIZE):
-            send_time = await self.send_metrics_parallel(1, sender)
-            execution_time_one_by_one = execution_time_one_by_one + send_time
+        dummy_metrics = self.get_zabbix_metrics(METRICS)
+        [metrics.append(dummy_metric) for dummy_metric in dummy_metrics] 
 
-        execution_time_chunk = \
-            await self.send_metrics_parallel(TEST_SIZE, sender)
+        assert len(metrics) == METRICS
 
-        self.assertLessEqual(execution_time_chunk, execution_time_one_by_one,
-                             'average time for parallel \
-execution was worse than serial')
+        start = time.time()
+        response = await asyncio.gather(sender.send(metrics))
+        end = time.time()
+        duration_first_send = end - start
+
+        assert response[0] is not None
+        assert response[0].response == 'success'
+        assert response[0].processed == METRICS
+        assert duration_first_send  > 0
+
+        tasks = [sender.send(metrics), sender.send(metrics), sender.send(metrics)]
+
+        start = time.time()
+        response = await asyncio.gather(*tasks)
+        end = time.time()
+        duration_second_send = end - start
+
+        assert duration_second_send  < (duration_first_send * 3)
+
 
 # send metrics along some long running task, the final time
 # must be the longest
-    async def test_long_running_task(self):
+    async def test_long_running_task(self, setup):
         SLEEP_TIME = 3
         sender = self.get_sender()
 
@@ -290,5 +288,21 @@ execution was worse than serial')
         await asyncio.gather(*tasks)
         end = time.time()
 
-        diff = end - start
-        self.assertAlmostEqual(SLEEP_TIME, diff, 1)
+        execution_time = end - start
+        assert execution_time <= SLEEP_TIME + 0.01
+
+
+    async def test_big_metric(self, setup):
+        sender = self.get_sender()
+        items = []
+
+        for _ in range(5000):
+            for metric in self.get_zabbix_metrics():
+                items.append(metric)
+
+        response = await sender.send(items)
+        assert response is not None
+        assert response.processed == 5000
+        assert response.response == 'success'
+
+        
