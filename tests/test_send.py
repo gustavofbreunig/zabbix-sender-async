@@ -209,6 +209,8 @@ class TestSend():
             os.environ["ZABBIX_USER"], os.environ["ZABBIX_PASS"])
         if not self.hostExists(auth):
             self.createHost(auth)
+            # wait for zabbix to persist changes
+            time.sleep(30)
 
     @pytest.fixture
     def setup(self):
