@@ -30,3 +30,24 @@ Expected result:
 ```
 ZabbixResponse(processed=1, failed=0, total=1, seconds_spent=0.00019, response='success')
 ```
+
+TLS-PSK example (compatible with Zabbix sender PSK mode):
+
+```python
+import asyncio
+from zabbixasync.sender import AsyncSender, ItemData
+
+async def sendmetrics():
+    sender = AsyncSender(
+        'zabbix-proxy.local',
+        10051,
+        tls_connect='psk',
+        tls_psk_identity='my-host-psk',
+        tls_psk_file='/etc/zabbix/zabbix_agent2.psk',
+    )
+    metric = ItemData(host='my-host', key='app.metric', value='42')
+    result = await sender.send(metric)
+    print(result)
+
+asyncio.run(sendmetrics())
+```

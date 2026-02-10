@@ -22,12 +22,19 @@ classifiers = [
 license = {file = "LICENSE"}
 keywords = ["zabbix", "sender", "async"]
 dependencies = [
-"python-dotenv"
+"python-dotenv",
+"sslpsk3; python_version < '3.13'"
 ]
 
 [project.urls]
 Homepage = "https://github.com/gustavofbreunig/zabbix-sender-async"
 Issues = "https://github.com/gustavofbreunig/zabbix-sender-async/issues"
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8",
+  "pytest-asyncio>=0.23,<1"
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["zabbixasync"]
