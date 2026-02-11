@@ -210,6 +210,7 @@ class AsyncSender():
         compat_context.set_ciphers('PSK')
         compat_context.psk = psk
         compat_context.psk_identity = self.tls_psk_identity.encode('utf-8')
+        compat_context.set_psk_client_callback(lambda hint: (self.tls_psk_identity, psk))
         return compat_context
 
     def _get_connection_kwargs(self) -> dict:
@@ -237,10 +238,13 @@ class AsyncSender():
 
         packet = self._create_packet(items)
 
-        reader, writer = await asyncio.open_connection(
+        connection = asyncio.open_connection(
             self.server,
             self.port,
             **self._get_connection_kwargs())
+        
+        reader, writer = await asyncio.wait_for(connection, timeout=self.timeout)
+
         await self._write_data(writer, packet)
 
         response = await self._read_response(reader)

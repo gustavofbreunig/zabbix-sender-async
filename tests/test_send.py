@@ -15,6 +15,7 @@ from zabbixasync.sender import AsyncSender, ItemData
 class TestSend:
     """
     Integration tests for Zabbix sender against a running Zabbix 7 instance.
+    First, it creates a host using the Zabbix API, then send various metrics.
 
     Required environment variables:
     - ZABBIX_HOST
@@ -320,3 +321,14 @@ class TestSend:
         assert response is not None
         assert response.processed == 5000
         assert response.response == "success"
+
+    @pytest.mark.asyncio
+    async def test_psk_host(self):
+        sender = self.get_sender()
+        metrics = self.get_zabbix_metrics()
+
+        result = await sender.send(metrics)
+        assert result is not None
+        assert result.response == "success"
+        assert result.total == 1
+        assert result.processed == 1        

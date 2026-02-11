@@ -4,9 +4,9 @@ from zabbixasync.sender import AsyncSender, ItemData
 
 ZABBIX_SERVER = "127.0.0.1"  # update if needed
 ZABBIX_PORT = 10051
-ZABBIX_HOST = "sender-test"
-PSK_IDENTITY = "sender-test-psk"
-PSK_HEX = "00112233445566778899AABBCCDDEEFF"
+ZABBIX_HOST = "async-sender-test-host"
+PSK_IDENTITY = "psk001"
+PSK_HEX = "578ad7af47cdfc9f73b41e6ee4d68587b351506b70613b0c21758178bef20587"
 LONG_TEXT_VALUE = (
     "This is a long trapper text payload used to verify sender behavior with "
     "bigger string values in Zabbix. "
