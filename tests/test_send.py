@@ -237,7 +237,6 @@ class TestSend:
         self.validate_environment_variables()
         self.setup_host()
 
-    @pytest.mark.asyncio
     async def test_simple_send(self):
         sender = self.get_sender()
         metrics = self.get_zabbix_metrics()
@@ -248,7 +247,6 @@ class TestSend:
         assert result.total == 1
         assert result.processed == 1
 
-    @pytest.mark.asyncio
     async def test_fail_send(self):
         sender = self.get_sender()
         invalid_data = ItemData("invalid_host", "invalid.metric", 0)
@@ -258,7 +256,6 @@ class TestSend:
         assert result.response == "success"
         assert result.failed == 1
 
-    @pytest.mark.asyncio
     async def test_big_chunk(self):
         metrics_count = 1000
         sender = self.get_sender()
@@ -288,7 +285,6 @@ class TestSend:
 
         assert duration_second_send < (duration_first_send * 3)
 
-    @pytest.mark.asyncio
     async def test_long_running_task(self):
         sleep_time = 3
         sender = self.get_sender()
@@ -308,7 +304,6 @@ class TestSend:
         execution_time = end - start
         assert execution_time <= sleep_time + 0.05
 
-    @pytest.mark.asyncio
     async def test_big_metric(self):
         sender = self.get_sender()
         items = []
@@ -322,8 +317,11 @@ class TestSend:
         assert response.processed == 5000
         assert response.response == "success"
 
-    @pytest.mark.asyncio
     async def test_psk_host(self):
+        os.environ['ZABBIX_TLS_CONNECT'] = 'psk'
+        os.environ['ZABBIX_TLS_PSK_IDENTITY'] = 'psk001'
+        os.environ['ZABBIX_TLS_PSK'] = '578ad7af47cdfc9f73b41e6ee4d68587b351506b70613b0c21758178bef20587'
+
         sender = self.get_sender()
         metrics = self.get_zabbix_metrics()
 

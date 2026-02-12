@@ -204,13 +204,14 @@ class AsyncSender():
                 "TLS-PSK requires Python 3.13+ or package 'sslpsk3'"
             ) from exc
 
-        compat_context = SSLPSKContext(ssl.PROTOCOL_TLS)
+        compat_context = SSLPSKContext(ssl.PROTOCOL_TLS_CLIENT)
         compat_context.check_hostname = False
         compat_context.verify_mode = ssl.CERT_NONE
         compat_context.set_ciphers('PSK')
         compat_context.psk = psk
         compat_context.psk_identity = self.tls_psk_identity.encode('utf-8')
         compat_context.set_psk_client_callback(lambda hint: (self.tls_psk_identity, psk))
+        compat_context.maximum_version = ssl.TLSVersion.TLSv1_2
         return compat_context
 
     def _get_connection_kwargs(self) -> dict:
