@@ -11,12 +11,14 @@ services:
       retries: 5
 
   zabbix-server:
-    image: zabbix/zabbix-server-pgsql:alpine-${ZABBIX_VERSION:-6.2}-latest
+    image: zabbix/zabbix-server-pgsql:alpine-${ZABBIX_VERSION:-7.0}-latest
     ports:
       - 10051:10051
     volumes:
       - /etc/localtime:/etc/localtime:ro
     environment:
+      DB_SERVER_HOST: postgres-server
+      POSTGRES_DB: zabbix
       POSTGRES_USER: zabbix
       POSTGRES_PASSWORD: zabbix
       ZBX_CACHEUPDATEFREQUENCY: 1
@@ -24,14 +26,17 @@ services:
       - postgres-server
 
   zabbix-web:
-    image: zabbix/zabbix-web-nginx-pgsql:alpine-${ZABBIX_VERSION:-6.2}-latest
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-${ZABBIX_VERSION:-7.0}-latest
     ports:
       - 8888:8080
     volumes:
       - /etc/localtime:/etc/localtime:ro
     environment:
+      DB_SERVER_HOST: postgres-server
+      POSTGRES_DB: zabbix
       POSTGRES_USER: zabbix
       POSTGRES_PASSWORD: zabbix
+      ZBX_SERVER_HOST: zabbix-server
     depends_on:
       - postgres-server
       - zabbix-server

@@ -1,0 +1,6 @@
+sslpsk3
+python-dotenv
+flake8
+build
+pytest
+pytest-asyncio
