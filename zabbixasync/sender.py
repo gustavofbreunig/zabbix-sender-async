@@ -243,7 +243,7 @@ class AsyncSender():
             self.server,
             self.port,
             **self._get_connection_kwargs())
-        
+
         reader, writer = await asyncio.wait_for(connection, timeout=self.timeout)
 
         await self._write_data(writer, packet)

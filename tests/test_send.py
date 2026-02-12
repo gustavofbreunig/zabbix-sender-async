@@ -329,4 +329,4 @@ class TestSend:
         assert result is not None
         assert result.response == "success"
         assert result.total == 1
-        assert result.processed == 1        
+        assert result.processed == 1
