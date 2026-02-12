@@ -177,10 +177,14 @@ class TestSend:
                     "useip": 1,
                     "ip": "127.0.0.1",
                     "dns": "",
-                    "port": "10050",
+                    "port": "10050"
                 }
             ],
             "groups": [{"groupid": groupid}],
+            "tls_accept": 3,
+            "tls_connect": 2,
+            "tls_psk_identity": "psk001",
+            "tls_psk": "578ad7af47cdfc9f73b41e6ee4d68587b351506b70613b0c21758178bef20587"
         }
 
         ret_json = self.do_request(request_json)
